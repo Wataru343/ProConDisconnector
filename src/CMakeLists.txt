@@ -9,19 +9,18 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 
 if(ANDROID)
     set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android" CACHE STRING "description")
-    add_library(${PROJECT_NAME} SHARED main.cpp usb.cpp qml.qrc)    
+    add_library(${PROJECT_NAME} SHARED main.cpp usb.cpp qml.qrc callbacks.hpp)
 else()
-    add_executable(${PROJECT_NAME} main.cpp usb.cpp qml.qrc)
+    add_executable(${PROJECT_NAME} main.cpp usb.cpp qml.qrc callbacks.hpp)
 endif()
+
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 find_package(Qt5 COMPONENTS Core Quick AndroidExtras REQUIRED)
 list(GET Qt5Core_INCLUDE_DIRS 0 Qt5_INCLUDE_DIR)
@@ -33,7 +32,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Core Qt5::Quick Qt5::AndroidE
 
 find_package(LIBUSB-1.0 REQUIRED)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_INCLUDE_DIRS} .)
 target_link_directories(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_LIBRARY_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_LIBRARIES})
 
