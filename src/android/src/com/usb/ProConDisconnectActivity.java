@@ -29,6 +29,9 @@ public class ProConDisconnectActivity extends QtActivity {
     private PendingIntent permission_intent_;
     private UsbManager manager_;
     private HashMap<String, SwitchController> connected_devices_;
+    private Timer timer_;
+    private TimerTask timer_task_;
+    private Handler handler_;
 
     public ProConDisconnectActivity() {
         Log.d("Java", "initialized.");
@@ -49,33 +52,66 @@ public class ProConDisconnectActivity extends QtActivity {
 
         connected_devices_ = new HashMap<String, SwitchController>();
 
-
-        final Handler handler = new Handler();
-
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                search_device();
-            }
-        }, 1000);
+        handler_ = new Handler();
+        timer_ = new Timer(false);
+        timer_task_ = null;
     }
 
     private void search_device() {
         HashMap<String, UsbDevice> devices = manager_.getDeviceList();
         Iterator<UsbDevice> itr = devices.values().iterator();
-        Log.d("Java", "aaaaaa.");
-        while(itr.hasNext()) {
-            UsbDevice device = itr.next();
+        boolean found = false;
 
-            if (device.getVendorId() == VID_NINTENDO && device.getProductId () == PID_PROCONTROLLER) {
-                manager_.requestPermission(device, permission_intent_);
+        if(devices.size() > 0) {
+            while (itr.hasNext()) {
+                UsbDevice device = itr.next();
+
+                if (device.getVendorId() == VID_NINTENDO && device.getProductId() == PID_PROCONTROLLER) {
+                    if (!connected_devices_.containsKey(device.getDeviceName())) {
+                        SwitchController controller = new SwitchController(device);
+                        controller.setState(SwitchController.State.ATTACHED);
+
+                        connected_devices_.put(device.getDeviceName(), controller);
+                    }
+                }
             }
+
+
+            for (SwitchController value : connected_devices_.values()) {
+                if (value.getState() == SwitchController.State.ATTACHED) {
+                    manager_.requestPermission(value.getDevice(), permission_intent_);
+                    found = true;
+                }
+            }
+        } else {
+            connected_devices_.clear();
         }
+
+        if(!found)
+            timer_.cancel();
+    }
+
+    private Timer make_timer() {
+        Timer timer = new Timer(false);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                handler_.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.d("Java", "search");
+                        search_device();
+                    }
+                });
+            }
+        }, 0, 500);
+        return timer;
     }
 
     private final BroadcastReceiver broadcast_receiver_ = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            Log.d("Java", "action: " + action);
 
             if(ACTION_USB_PERMISSION.equals(action)) {
                 Log.d("Java", "ACTION_USB_PERMISSION");
@@ -85,12 +121,22 @@ public class ProConDisconnectActivity extends QtActivity {
 
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                         if(device != null) {
-                            UsbDeviceConnection connection = manager_.openDevice(device);
-                            connection.claimInterface(device.getInterface(0), true);
+                            if(connected_devices_.containsKey(device.getDeviceName())) {
+                                SwitchController controller = connected_devices_.get(device.getDeviceName());
 
-                            connected_devices_.put(device.getDeviceName(), new SwitchController(device, connection));
-                            device_attached(device.getDeviceId(), device.getProductId(), device.getDeviceName());
-                            Log.d("Java", "device: " + device.getDeviceId() + " DeviceName: " + device.getDeviceName());
+                                if(controller.getState() == SwitchController.State.ATTACHED) {
+                                    UsbDeviceConnection connection = manager_.openDevice(controller.getDevice());
+                                    connection.claimInterface(device.getInterface(0), true);
+
+                                    controller.setConnection(connection);
+                                    controller.setState(SwitchController.State.PERMITTED);
+                                    device_attached(controller.getDevice().getDeviceId(), controller.getDevice().getProductId(), controller.getDevice().getDeviceName());
+
+                                    Log.d("Java", "device: " + device.getDeviceId() + " DeviceName: " + device.getDeviceName());
+                                } else {
+                                    Log.d("Java", "device is already permitted: " + device);
+                                }
+                            }
                         }
                     } else {
                         Log.d("Java", "permission denied for device " + device);
@@ -103,7 +149,12 @@ public class ProConDisconnectActivity extends QtActivity {
                     UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
 
                     if (device != null) {
-                        manager_.requestPermission(device, permission_intent_);
+                        SwitchController controller = new SwitchController(device);
+                        controller.setState(SwitchController.State.ATTACHED);
+
+                        connected_devices_.put(device.getDeviceName(), controller);
+
+                        timer_ = make_timer();
                     }
                 }
             } else if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
@@ -125,8 +176,9 @@ public class ProConDisconnectActivity extends QtActivity {
     public void write(String device_name) {
         synchronized(this) {
             if(connected_devices_.containsKey(device_name)){
-                UsbDevice device = connected_devices_.get(device_name).getDevice();
-                UsbDeviceConnection connection = connected_devices_.get(device_name).getConnection();
+                SwitchController controller = connected_devices_.get(device_name);
+                UsbDevice device = controller.getDevice();
+                UsbDeviceConnection connection = controller.getConnection();
 
                 for(int i = 0; i < device.getInterfaceCount(); i++) {
                     UsbInterface intf = device.getInterface(i);
@@ -148,6 +200,7 @@ public class ProConDisconnectActivity extends QtActivity {
                     byte[] bytes2 = {(byte) 0x80, (byte) 0x92, (byte) 0x00, (byte) 0x31, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x05, (byte) 0x00, (byte) 0x01, (byte) 0x40, (byte) 0x40, (byte) 0x00, (byte) 0x01, (byte) 0x40, (byte) 0x40, (byte) 0x07, (byte) 0x00};
                     ret = connection.bulkTransfer(endpoint, bytes2, bytes2.length, 0);
 
+                    controller.setState(SwitchController.State.UNPAIRED);
                     Log.d("TAG", "command witten");
                 }
             }

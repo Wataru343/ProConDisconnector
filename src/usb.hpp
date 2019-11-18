@@ -13,15 +13,14 @@ public:
 
 signals:
     void deviceAttached(int vid, int pid, const QString &device_name);
+    void callback_assigned();
 
 public slots:
     void write_command(const QString &device_name);
+    void search_device();
 
 private:
-    QAndroidJniObject *JniTestClass;
-    jclass testClass;
-    jmethodID _begin, _download;
-    QAndroidJniObject m_wakeLock;
+    QAndroidJniObject activity_;
 
 };
 

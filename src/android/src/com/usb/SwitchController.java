@@ -5,10 +5,19 @@ import android.hardware.usb.UsbDeviceConnection;
 public class SwitchController {
     private UsbDevice device_;
     private UsbDeviceConnection connection_;
+    private  State state_;
 
-    public SwitchController(UsbDevice device, UsbDeviceConnection connection) {
+    public enum State {
+        NONE,
+        ATTACHED,
+        PERMITTED,
+        UNPAIRED,
+    }
+
+    public SwitchController(UsbDevice device) {
         device_ = device;
-        connection_ = connection;
+        connection_ = null;
+        state_ = State.NONE;
     }
 
     public UsbDevice getDevice() {
@@ -17,5 +26,17 @@ public class SwitchController {
 
     public UsbDeviceConnection getConnection() {
         return connection_;
+    }
+
+    public void setConnection(UsbDeviceConnection connection) {
+        connection_ = connection;
+    }
+
+    public State getState() {
+        return state_;
+    }
+
+    public void setState(State state) {
+        state_ = state;
     }
 }

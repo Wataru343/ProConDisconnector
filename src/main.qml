@@ -13,7 +13,6 @@ Window {
         id: u
         onDeviceAttached: {
             button.text = device_name
-            write_command(device_name)
         }
     }
 
@@ -23,5 +22,25 @@ Window {
         height: 100
         text: "aaaaa"
         onClicked: u.getVersion()
+    }
+
+    Connections {
+        target: Qt.application
+        onStateChanged: {
+            switch (Qt.application.state) {
+            case Qt.ApplicationSuspended:
+                console.debug("application suspended")
+                break
+            case Qt.ApplicationHidden:
+                console.debug("Application hidden")
+                break
+            case Qt.ApplicationActive:
+                console.debug("Application active")
+                break
+            case Qt.ApplicationInactive:
+                console.debug("Application inactive")
+                break
+            }
+        }
     }
 }

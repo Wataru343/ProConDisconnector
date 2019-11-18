@@ -5,6 +5,7 @@
 #include <QtCore/QString>
 #include <QtAndroidExtras/QAndroidJniObject>
 #include <QtAndroidExtras/QAndroidJniEnvironment>
+#include <QDebug>
 
 static void device_attached_callback(JNIEnv *env, jobject obj, jint vid, jint pid, jstring device_name);
 
