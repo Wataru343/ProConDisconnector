@@ -29,14 +29,6 @@ message(STATUS "Found Qt5: ${Qt5_INCLUDE_DIR} (found version \"${Qt5_VERSION}\")
 target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Core Qt5::Quick Qt5::AndroidExtras)
 
-
-find_package(LIBUSB-1.0 REQUIRED)
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_INCLUDE_DIRS} .)
-target_link_directories(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_LIBRARY_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSB-1.0_LIBRARIES})
-
-
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
 # Check http://doc.qt.io/qt-5/deployment-android.html for more information.
 # These variables must use CACHE, otherwise QtCreator won't see them.

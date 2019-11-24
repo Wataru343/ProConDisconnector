@@ -4,7 +4,6 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtAndroidExtras/QtAndroid>
-#include <libusb-1.0/libusb.h>
 #include "callbacks.hpp"
 #include "command.hpp"
 #include "usb.hpp"
