@@ -4,25 +4,51 @@ import QtQuick.Controls 2.12
 import Usb 1.0
 
 Window {
+    id: root
+    title: qsTr("ProCon Disconnect")
     visible: true
-    width: 640
-    height: 480
-    title: qsTr("Hello World")
 
     Usb {
-        id: u
+        id: usb
         onDeviceAttached: {
-            button.text = device_name
+            model.append({ device_name: device_name })
+        }
+
+        onDeviceDetached: {
+            for(var i = 0; i < model.count; i++)
+                if(model.get(i).device_name === device_name)
+                    model.remove(model.get(i));
         }
     }
 
-    Button {
-        id: button
-        width: 300
-        height: 100
-        text: "aaaaa"
-        onClicked: u.getVersion()
+    ListModel {
+        id: model
     }
+
+    ListView {
+        width: root.width
+        height: root.height
+
+        model: model
+        delegate: Rectangle {
+            anchors.left: parent.left
+            anchors.leftMargin: parent.width * 0.1
+            anchors.right: parent.right
+            anchors.rightMargin: parent.width * 0.1
+            height: text.height
+
+            Text {
+                id: text
+                text: device_name
+            }
+        }
+
+        ScrollBar.vertical: ScrollBar {
+            active: true
+        }
+    }
+
+
 
     Connections {
         target: Qt.application

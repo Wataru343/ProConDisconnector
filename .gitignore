@@ -73,3 +73,8 @@ Thumbs.db
 *.exe
 
 */android/.project
+*/android/.gradle/4.6/fileChanges/last-build.bin
+*/android/.gradle/4.6/fileHashes/fileHashes.bin
+*/android/.gradle/4.6/fileHashes/fileHashes.lock
+*/android/.gradle/vcsWorkingDirs/gc.properties
+*/android/.settings/org.eclipse.buildship.core.prefs

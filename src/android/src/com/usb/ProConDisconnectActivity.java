@@ -22,6 +22,7 @@ import org.qtproject.qt5.android.bindings.QtActivity;
 
 public class ProConDisconnectActivity extends QtActivity {
     private native void device_attached(int vid, int pid, String name);
+    private native void device_detached(int vid, int pid, String name);
 
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private static final int VID_NINTENDO = 0x057E;
@@ -38,8 +39,7 @@ public class ProConDisconnectActivity extends QtActivity {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         manager_ = (UsbManager)getSystemService(Context.USB_SERVICE);
@@ -61,6 +61,8 @@ public class ProConDisconnectActivity extends QtActivity {
         HashMap<String, UsbDevice> devices = manager_.getDeviceList();
         Iterator<UsbDevice> itr = devices.values().iterator();
         boolean found = false;
+
+        Log.d("Java", "search device: " + String.valueOf(devices.size()));
 
         if(devices.size() > 0) {
             while (itr.hasNext()) {
@@ -99,7 +101,6 @@ public class ProConDisconnectActivity extends QtActivity {
                 handler_.post(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d("Java", "search");
                         search_device();
                     }
                 });
@@ -165,22 +166,25 @@ public class ProConDisconnectActivity extends QtActivity {
 
                     Log.d("Java", "device: " + device.getDeviceId() + " DeviceName: " + device.getDeviceName());
 
-                    if(connected_devices_.containsKey(device.getDeviceName()))
+                    if(connected_devices_.containsKey(device.getDeviceName())) {
+                        SwitchController controller = connected_devices_.get(device.getDeviceName());
+                        device_detached(controller.getDevice().getDeviceId(), controller.getDevice().getProductId(), controller.getDevice().getDeviceName());
                         connected_devices_.remove(device.getDeviceName());
+                    }
                 }
             }
         }
     };
 
 
-    public void write(String device_name) {
-        synchronized(this) {
-            if(connected_devices_.containsKey(device_name)){
+    public void write(String device_name, byte[] data) {
+        synchronized (this) {
+            if (connected_devices_.containsKey(device_name)) {
                 SwitchController controller = connected_devices_.get(device_name);
                 UsbDevice device = controller.getDevice();
                 UsbDeviceConnection connection = controller.getConnection();
 
-                for(int i = 0; i < device.getInterfaceCount(); i++) {
+                for (int i = 0; i < device.getInterfaceCount(); i++) {
                     UsbInterface intf = device.getInterface(i);
 
                     UsbEndpoint endpoint = null;
@@ -192,19 +196,11 @@ public class ProConDisconnectActivity extends QtActivity {
                         }
                     }
 
+                    int ret = connection.bulkTransfer(endpoint, data, data.length, 0);
 
-                    byte[] bytes = {(byte) 0x80, (byte) 0x02};
-                    int ret = connection.bulkTransfer(endpoint, bytes, bytes.length, 0);
-
-
-                    byte[] bytes2 = {(byte) 0x80, (byte) 0x92, (byte) 0x00, (byte) 0x31, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x05, (byte) 0x00, (byte) 0x01, (byte) 0x40, (byte) 0x40, (byte) 0x00, (byte) 0x01, (byte) 0x40, (byte) 0x40, (byte) 0x07, (byte) 0x00};
-                    ret = connection.bulkTransfer(endpoint, bytes2, bytes2.length, 0);
-
-                    controller.setState(SwitchController.State.UNPAIRED);
-                    Log.d("TAG", "command witten");
+                    Log.d("TAG", "command witten. Length: " + String.valueOf(ret));
                 }
             }
         }
-
     }
 }

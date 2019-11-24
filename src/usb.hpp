@@ -13,6 +13,7 @@ public:
 
 signals:
     void deviceAttached(int vid, int pid, const QString &device_name);
+    void deviceDetached(int vid, int pid, const QString &device_name);
     void callback_assigned();
 
 public slots:
