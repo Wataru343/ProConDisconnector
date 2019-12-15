@@ -37,8 +37,8 @@ public:
     }
 
 signals:
-    void device_attached(int vid, int pid, const QString &device_name);
-    void device_detached(int vid, int pid, const QString &device_name);
+    void device_attached(const QString &device_name, int vid, int pid);
+    void device_detached(const QString &device_name, int vid, int pid);
 
 public slots:
 
@@ -49,14 +49,15 @@ static void device_attached_callback(JNIEnv *env, jobject obj, jint vid, jint pi
     (void)obj;
     jboolean is_copy = false;
     QString str(env->GetStringUTFChars(device_name, &is_copy));
-    emit callback_manager::instance()->device_attached(vid, pid, str);
+
+    emit callback_manager::instance()->device_attached(str, vid, pid);
 }
 
 static void device_detached_callback(JNIEnv *env, jobject obj, jint vid, jint pid, jstring device_name) {
     (void)obj;
     jboolean is_copy = false;
     QString str(env->GetStringUTFChars(device_name, &is_copy));
-    emit callback_manager::instance()->device_detached(vid, pid, str);
+    emit callback_manager::instance()->device_detached(str, vid, pid);
 }
 
 

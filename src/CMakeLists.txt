@@ -15,9 +15,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 if(ANDROID)
     set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android" CACHE STRING "description")
-    add_library(${PROJECT_NAME} SHARED main.cpp usb.cpp qml.qrc callbacks.hpp)
+    add_library(${PROJECT_NAME} SHARED main.cpp usb_manager.cpp android_device.cpp qml.qrc callbacks.hpp switch_controller_model.cpp switch_controller.hpp utility.hpp)
 else()
-    add_executable(${PROJECT_NAME} main.cpp usb.cpp qml.qrc callbacks.hpp)
+    add_executable(${PROJECT_NAME} main.cpp usb_manager.cpp qml.qrc callbacks.hpp switch_controller_model.cpp switch_controller.hpp utility.hpp)
 endif()
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

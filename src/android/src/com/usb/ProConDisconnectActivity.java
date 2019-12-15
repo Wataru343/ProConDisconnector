@@ -7,15 +7,18 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.hardware.usb.UsbAccessory;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
+import android.hardware.usb.UsbRequest;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import org.qtproject.qt5.android.bindings.QtActivity;
 
@@ -30,6 +33,7 @@ public class ProConDisconnectActivity extends QtActivity {
     private PendingIntent permission_intent_;
     private UsbManager manager_;
     private HashMap<String, SwitchController> connected_devices_;
+    private Vibrator vibrator_;
     private Timer timer_;
     private TimerTask timer_task_;
     private Handler handler_;
@@ -51,6 +55,8 @@ public class ProConDisconnectActivity extends QtActivity {
         permission_intent_ = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
 
         connected_devices_ = new HashMap<String, SwitchController>();
+
+        vibrator_ = (Vibrator)getSystemService(VIBRATOR_SERVICE);
 
         handler_ = new Handler();
         timer_ = new Timer(false);
@@ -187,7 +193,7 @@ public class ProConDisconnectActivity extends QtActivity {
                 for (int i = 0; i < device.getInterfaceCount(); i++) {
                     UsbInterface intf = device.getInterface(i);
 
-                    UsbEndpoint endpoint = null;
+                    UsbEndpoint endpoint= null;
 
                     for (int j = 0; j < intf.getEndpointCount(); j++) {
                         if (intf.getEndpoint(j).getDirection() == UsbConstants.USB_DIR_OUT) {
@@ -197,9 +203,60 @@ public class ProConDisconnectActivity extends QtActivity {
                     }
 
                     int ret = connection.bulkTransfer(endpoint, data, data.length, 0);
-
-                    Log.d("TAG", "command witten. Length: " + String.valueOf(ret));
+                    Log.d("Java", "command witten. Length: " + String.valueOf(ret));
                 }
+            }
+        }
+    }
+
+    public void read(String device_name, byte[] dst) {
+        synchronized (this) {
+            if (connected_devices_.containsKey(device_name)) {
+                SwitchController controller = connected_devices_.get(device_name);
+                UsbDevice device = controller.getDevice();
+                UsbDeviceConnection connection = controller.getConnection();
+
+                for (int i = 0; i < device.getInterfaceCount(); i++) {
+                    UsbInterface intf = device.getInterface(i);
+
+                    UsbEndpoint endpoint = null;
+
+                    for (int j = 0; j < intf.getEndpointCount(); j++) {
+                        if (intf.getEndpoint(j).getDirection() == UsbConstants.USB_DIR_IN) {
+                            endpoint = intf.getEndpoint(j);
+                            break;
+                        }
+                    }
+
+                    UsbRequest request = new UsbRequest();
+                    if (!request.initialize(connection, endpoint)) return;
+
+                    int ret = connection.bulkTransfer(endpoint, dst, dst.length, 1000);
+
+                    request.close();
+
+
+                    StringBuilder sb = new StringBuilder();
+                    for (byte d : dst) {
+                        sb.append(String.format("0x%02X ", d));
+                    }
+                    String str = sb.toString();
+
+                    Log.d("Java", "data read.: " + str);
+                }
+            }
+        }
+    }
+
+    public void vibrate() {
+        if(vibrator_.hasVibrator()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                long pattern[] = {200, 200, 200, 200};
+                int amplitudes[] = {0, 255, 0, 255};
+                vibrator_.vibrate(VibrationEffect.createWaveform(pattern, amplitudes,-1));
+            }else{
+                long pattern[] = {200, 200, 200, 200};
+                vibrator_.vibrate(pattern, -1);
             }
         }
     }
