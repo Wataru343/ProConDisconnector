@@ -6,9 +6,11 @@
 
 namespace android_device {
 void vibrate();
+void search_device();
+QString all_device();
 
 template <class T, class U>
-void write_command(const T &jstr, const U &command) {
+int write_command(const T &jstr, const U &command) {
     QAndroidJniEnvironment env;
 
     jbyteArray arr = env->NewByteArray(std::size(command));
@@ -18,10 +20,14 @@ void write_command(const T &jstr, const U &command) {
     std::copy(std::begin(command), std::end(command), buf);
     env->SetByteArrayRegion(arr, 0, std::size(command), buf);
 
-    QtAndroid::androidActivity().callMethod<void>("write", "(Ljava/lang/String;[B)V", jstr.template object<jstring>(), arr);
+    jint ret = QtAndroid::androidActivity().callMethod<jint>("write", "(Ljava/lang/String;[B)I", jstr.template object<jstring>(), arr);
+
     env->ReleaseByteArrayElements(arr, buf, 0);
+
+    return ret;
 }
 
+//戻り値:データ,データのバイト数
 template <class T>
 auto read_data(const T &jstr) {
     QAndroidJniEnvironment env;
@@ -29,7 +35,7 @@ auto read_data(const T &jstr) {
     std::vector<uint8_t> dst(64, 0);
 
     jbyteArray arr = env->NewByteArray(static_cast<jsize>(std::size(dst)));
-    QtAndroid::androidActivity().callMethod<void>("read", "(Ljava/lang/String;[B)V", jstr.template object<jstring>(), arr);
+    jint ret = QtAndroid::androidActivity().callMethod<jint>("read", "(Ljava/lang/String;[B)I", jstr.template object<jstring>(), arr);
 
 
     jboolean is_copy = false;
@@ -38,7 +44,7 @@ auto read_data(const T &jstr) {
     std::copy(buf, buf + std::size(dst), std::begin(dst));
     env->ReleaseByteArrayElements(arr, buf, 0);
 
-    return dst;
+    return std::make_pair((dst), ret);
 }
 }
 

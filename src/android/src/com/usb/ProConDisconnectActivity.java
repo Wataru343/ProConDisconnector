@@ -99,6 +99,20 @@ public class ProConDisconnectActivity extends QtActivity {
             timer_.cancel();
     }
 
+    private String all_device() {
+        String result = "";
+        for(String key : connected_devices_.keySet()) {
+            result += key + ",";
+        }
+
+        if(result.length() > 0)
+            result = result.substring(0, result.length() - 2);
+
+        Log.d("Java", "all device: " + result);
+
+        return result;
+    }
+
     private Timer make_timer() {
         Timer timer = new Timer(false);
         timer.schedule(new TimerTask() {
@@ -112,6 +126,7 @@ public class ProConDisconnectActivity extends QtActivity {
                 });
             }
         }, 0, 500);
+
         return timer;
     }
 
@@ -183,7 +198,8 @@ public class ProConDisconnectActivity extends QtActivity {
     };
 
 
-    public void write(String device_name, byte[] data) {
+    public int write(String device_name, byte[] data) {
+        int ret = -1;
         synchronized (this) {
             if (connected_devices_.containsKey(device_name)) {
                 SwitchController controller = connected_devices_.get(device_name);
@@ -202,14 +218,17 @@ public class ProConDisconnectActivity extends QtActivity {
                         }
                     }
 
-                    int ret = connection.bulkTransfer(endpoint, data, data.length, 0);
+                    ret = connection.bulkTransfer(endpoint, data, data.length, 0);
                     Log.d("Java", "command witten. Length: " + String.valueOf(ret));
                 }
             }
         }
+
+        return ret;
     }
 
-    public void read(String device_name, byte[] dst) {
+    public int read(String device_name, byte[] dst) {
+        int ret = -1;
         synchronized (this) {
             if (connected_devices_.containsKey(device_name)) {
                 SwitchController controller = connected_devices_.get(device_name);
@@ -229,9 +248,9 @@ public class ProConDisconnectActivity extends QtActivity {
                     }
 
                     UsbRequest request = new UsbRequest();
-                    if (!request.initialize(connection, endpoint)) return;
+                    if (!request.initialize(connection, endpoint)) return ret;
 
-                    int ret = connection.bulkTransfer(endpoint, dst, dst.length, 1000);
+                    ret = connection.bulkTransfer(endpoint, dst, dst.length, 1000);
 
                     request.close();
 
@@ -246,6 +265,8 @@ public class ProConDisconnectActivity extends QtActivity {
                 }
             }
         }
+
+        return ret;
     }
 
     public void vibrate() {
@@ -254,7 +275,7 @@ public class ProConDisconnectActivity extends QtActivity {
                 long pattern[] = {200, 200, 200, 200};
                 int amplitudes[] = {0, 255, 0, 255};
                 vibrator_.vibrate(VibrationEffect.createWaveform(pattern, amplitudes,-1));
-            }else{
+            } else {
                 long pattern[] = {200, 200, 200, 200};
                 vibrator_.vibrate(pattern, -1);
             }

@@ -11,6 +11,7 @@ class usb_manager : public QObject
 public:
     explicit usb_manager(QObject *parent = nullptr);
     const Qt::ApplicationState& application_state() const noexcept;
+    QString all_device();
 
 signals:
     void callback_assigned();
@@ -20,6 +21,7 @@ signals:
     void status_command_witten_direct(const QString &device_name, int vid, int pid);
     void device_initialize(const QString &device_name, const QString &mac_address, int vid, int pid);
     void device_initialize_direct(const QString &device_name, const QString &mac_address, int vid, int pid);
+    void access_failed(usb_manager *sender);
 
 public slots:
     void write_status_command(const QString &device_name, int vid, int pid);

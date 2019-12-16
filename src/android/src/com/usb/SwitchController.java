@@ -5,7 +5,7 @@ import android.hardware.usb.UsbDeviceConnection;
 public class SwitchController {
     private UsbDevice device_;
     private UsbDeviceConnection connection_;
-    private  State state_;
+    private State state_;
 
     public enum State {
         NONE,

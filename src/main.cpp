@@ -14,7 +14,13 @@ int main(int argc, char *argv[]) {
     switch_controller_model controller_list;
 
     QObject::connect(&app, &QGuiApplication::applicationStateChanged, &usb, &usb_manager::set_application_state, Qt::DirectConnection);
-    QObject::connect(&app, &QGuiApplication::applicationStateChanged, &controller_list, &switch_controller_model::set_application_state, Qt::DirectConnection);
+    QObject::connect(&app, &QGuiApplication::applicationStateChanged, [&](const Qt::ApplicationState state){
+        if(controller_list.application_state() == Qt::ApplicationSuspended && state == Qt::ApplicationActive) {
+            controller_list.remove_if_not(usb.all_device().split(",").toVector());
+            controller_list.refresh();
+        }
+        controller_list.set_application_state(state);
+    });
 
     QObject::connect(&usb, &usb_manager::device_initialize, &controller_list, &switch_controller_model::add_if_not_exist, Qt::QueuedConnection);
     QObject::connect(&usb, &usb_manager::device_initialize_direct, &controller_list, &switch_controller_model::add_if_not_exist, Qt::DirectConnection);
@@ -28,6 +34,9 @@ int main(int argc, char *argv[]) {
     QObject::connect(&controller_list, &switch_controller_model::device_added_twice, &usb, &usb_manager::vibrate, Qt::QueuedConnection);
     QObject::connect(&controller_list, &switch_controller_model::device_added_twice_direct, &usb, &usb_manager::vibrate, Qt::DirectConnection);
 
+    QObject::connect(&usb, &usb_manager::access_failed, &usb, [&](usb_manager *sender){
+        controller_list.remove_if_not(sender->all_device().split(",").toVector());
+    }, Qt::DirectConnection);
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("switch_controller_model", &controller_list);

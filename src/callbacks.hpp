@@ -15,6 +15,7 @@ class callback_manager : public QObject
     Q_OBJECT
 public:
     explicit callback_manager(QObject *parent = nullptr): QObject(parent) {
+        //Java部分にコールバック関数のポインタを登録
         QAndroidJniEnvironment env;
         jclass activity = env->FindClass("com/usb/ProConDisconnectActivity");
         JNINativeMethod pmethods[] {
@@ -45,6 +46,7 @@ public slots:
 
 };
 
+//デバイスが接続されたとき呼ばれる
 static void device_attached_callback(JNIEnv *env, jobject obj, jint vid, jint pid, jstring device_name) {
     (void)obj;
     jboolean is_copy = false;
@@ -53,6 +55,7 @@ static void device_attached_callback(JNIEnv *env, jobject obj, jint vid, jint pi
     emit callback_manager::instance()->device_attached(str, vid, pid);
 }
 
+//デバイスが切断されたときに呼ばれる
 static void device_detached_callback(JNIEnv *env, jobject obj, jint vid, jint pid, jstring device_name) {
     (void)obj;
     jboolean is_copy = false;

@@ -18,7 +18,9 @@ public:
     explicit switch_controller_model(QObject *parent = nullptr);
     switch_controller* data();
     void push_back(const switch_controller &elm);
+    void refresh() noexcept;
     const Qt::ApplicationState& application_state() const noexcept;
+    void remove_if_not(const QVector<QString> &device_list);
 
 signals:
     void device_attached(const QString &device_name, int vid, int pid);

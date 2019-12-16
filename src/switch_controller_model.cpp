@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "switch_controller_model.hpp"
 
 switch_controller_model::switch_controller_model(QObject *parent): QAbstractListModel(parent), list_(), application_state_(Qt::ApplicationActive) {
@@ -15,9 +16,21 @@ void switch_controller_model::push_back(const switch_controller &elm)
     endInsertRows();
 }
 
+void switch_controller_model::refresh() noexcept {
+    beginResetModel();
+    endResetModel();
+}
+
+//MACアドレスが重複していないなら追加する
 void switch_controller_model::add_if_not_exist(const QString &device_name, const QString &mac_address, int vid, int pid) {
     for(int i = 0; i < rowCount(); i++) {
         if((data() + i)->mac_address == mac_address.toStdString()) {
+            //同じデバイスが5秒以上経過したあと接続された場合再接続されたものとみなす
+            if((std::chrono::steady_clock::now() - (data() + i)->atached_time) >= std::chrono::seconds(10)) {
+                removeRow(i);
+                break;
+            }
+
             (data() + i)->device_name = device_name.toStdString();
             (data() + i)->is_rebooted = true;
 
@@ -33,6 +46,8 @@ void switch_controller_model::add_if_not_exist(const QString &device_name, const
     controller.mac_address = mac_address.toStdString();
     controller.pid = pid;
     controller.vid = vid;
+    controller.atached_time = std::chrono::steady_clock::now();
+    controller.is_rebooted = false;
 
     push_back(controller);
 
@@ -40,6 +55,7 @@ void switch_controller_model::add_if_not_exist(const QString &device_name, const
     else emit device_added_direct(device_name);
 }
 
+//既に再起動済みなら削除する
 void switch_controller_model::remove_if_already_rebooted(const QString &device_name) {
     for(int i = 0; i < rowCount(); i++) {
         if((data() + i)->is_rebooted) {
@@ -52,16 +68,25 @@ void switch_controller_model::remove_if_already_rebooted(const QString &device_n
 }
 
 void switch_controller_model::set_application_state(const Qt::ApplicationState state) noexcept {
-    if(application_state_ != Qt::ApplicationActive && state == Qt::ApplicationActive) {
-        beginResetModel();
-        endResetModel();
-    }
-
     application_state_ = state;
 }
 
 const Qt::ApplicationState &switch_controller_model::application_state() const noexcept {
     return application_state_;
+}
+
+//渡したリストに無い要素を削除
+void switch_controller_model::remove_if_not(const QVector<QString> &device_list) {
+    auto result = std::remove_if(std::begin(list_), std::end(list_), [&](const decltype(list_)::value_type &elm){
+        return std::none_of(std::begin(device_list), std::end(device_list), [&](const QString &name) {
+            return name.toStdString() == elm.device_name;
+        });
+    });
+
+    if(result != std::end(list_)) {
+        list_.erase(result, std::end(list_));
+        refresh();
+    }
 }
 
 int switch_controller_model::rowCount(const QModelIndex &parent) const {
